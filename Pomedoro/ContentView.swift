@@ -50,8 +50,7 @@ class PomodoroTimer: ObservableObject {
         }
     }
     
-    init() {
-    }
+    init() { }
     
     func start() {
         guard !isRunning else { return }
@@ -69,6 +68,7 @@ class PomodoroTimer: ObservableObject {
     func pause() {
         isRunning = false
         timer?.invalidate()
+        timer = nil
     }
     
     func reset() {
@@ -97,7 +97,6 @@ class PomodoroTimer: ObservableObject {
             timeRemaining = workDuration
         }
         
-        // Remove scheduleNotification call
         playSound(named: isWorkSession ? "work" : "break")
     }
     
@@ -107,8 +106,6 @@ class PomodoroTimer: ObservableObject {
     
     func cleanup() {
         pause()
-        timer?.invalidate()
-        timer = nil
         audioManager.cleanup()
     }
     
@@ -290,13 +287,13 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Toolbar
             HStack {
-                Picker("", selection: $selectedView) { // Removed "View" text
+                Picker("", selection: $selectedView) {
                     Text("Timer").tag(0)
                     Text("Settings").tag(1)
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 200)
-                .labelsHidden() // Hide the label completely
+                .labelsHidden()
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)

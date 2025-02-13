@@ -15,7 +15,8 @@ struct PomedoroApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
-    private var observers: [NSObjectProtocol] = []
+    // Store observer tokens along with their notification center for proper removal.
+    private var observerTokens: [(center: AnyObject, token: NSObjectProtocol)] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Create status bar controller
@@ -30,7 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let distributedCenter = DistributedNotificationCenter.default()
         
         // Screen lock notifications
-        let lockNotifications: [(NotificationCenter, String)] = [
+        let lockNotifications: [(AnyObject, String)] = [
             (notificationCenter, NSWorkspace.sessionDidResignActiveNotification.rawValue),
             (notificationCenter, NSWorkspace.screensDidSleepNotification.rawValue),
             (distributedCenter, "com.apple.screenIsLocked"),
@@ -38,7 +39,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ]
         
         // Screen unlock notifications
-        let unlockNotifications: [(NotificationCenter, String)] = [
+        let unlockNotifications: [(AnyObject, String)] = [
             (notificationCenter, NSWorkspace.sessionDidBecomeActiveNotification.rawValue),
             (notificationCenter, NSWorkspace.screensDidWakeNotification.rawValue),
             (distributedCenter, "com.apple.screenIsUnlocked"),
@@ -47,37 +48,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Add lock observers
         for (center, name) in lockNotifications {
-            let observer = center.addObserver(
+            let observer = (center as? NotificationCenter ?? distributedCenter).addObserver(
                 forName: NSNotification.Name(name),
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
                 self?.statusBarController?.handleScreenLock()
             }
-            observers.append(observer)
+            observerTokens.append((center: center, token: observer))
         }
         
         // Add unlock observers
         for (center, name) in unlockNotifications {
-            let observer = center.addObserver(
+            let observer = (center as? NotificationCenter ?? distributedCenter).addObserver(
                 forName: NSNotification.Name(name),
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
                 self?.statusBarController?.handleScreenUnlock()
             }
-            observers.append(observer)
+            observerTokens.append((center: center, token: observer))
         }
     }
     
     func applicationWillTerminate(_ notification: Notification) {
-        // Clean up all observers
-        observers.forEach { observer in
-            NotificationCenter.default.removeObserver(observer)
-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
-            DistributedNotificationCenter.default().removeObserver(observer)
+        // Clean up all observers using the stored pairs.
+        for (center, token) in observerTokens {
+            if let center = center as? NotificationCenter {
+                center.removeObserver(token)
+            } else if let center = center as? DistributedNotificationCenter {
+                center.removeObserver(token)
+            }
         }
-        observers.removeAll()
+        observerTokens.removeAll()
         
         statusBarController?.cleanup()
     }
@@ -114,7 +117,7 @@ class StatusBarController: NSObject {
         
         // Create the popover
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 320, height: 300) // Fixed parameter label
+        popover.contentSize = NSSize(width: 320, height: 300)
         popover.behavior = .applicationDefined
         popover.animates = true
         
@@ -153,7 +156,6 @@ class StatusBarController: NSObject {
     private func showPopover(sender: Any?) {
         guard let statusBarButton = statusItem.button else { return }
         
-        // Let the popover size itself based on content
         popover.show(relativeTo: statusBarButton.bounds, of: statusBarButton, preferredEdge: .minY)
         eventMonitor?.start()
         
@@ -170,13 +172,10 @@ class StatusBarController: NSObject {
     
     func cleanup() {
         hidePopover(sender: nil)
-        if let statusItem = statusItem {
-            NSStatusBar.system.removeStatusItem(statusItem)
-        }
+        NSStatusBar.system.removeStatusItem(statusItem)
     }
     
     func handleScreenLock() {
-        // Access ContentView through the hosting controller
         if let hostingController = popover.contentViewController as? NSHostingController<ContentView> {
             let contentView = hostingController.rootView
             contentView.pomodoroTimer.handleScreenLock()
@@ -215,9 +214,9 @@ class EventMonitor {
     }
     
     func stop() {
-        if monitor != nil {
-            NSEvent.removeMonitor(monitor!)
-            monitor = nil
+        if let monitor = monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
         }
     }
 }
