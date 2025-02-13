@@ -1,5 +1,6 @@
 import SwiftUI
-import AVFoundation  // Add this import
+import AVFoundation
+import CoreAudio
 
 // Add these color extensions after the existing imports
 extension Color {
@@ -37,13 +38,19 @@ class PomodoroTimer: ObservableObject {
     @Published var isWorkSession = true
     
     private var timer: Timer?
-    private var audioPlayer: AVAudioPlayer?
     
     // Add this new property to track if timer was running before screen lock
     private var wasRunningBeforeLock = false
     
+    private let audioManager = PomodoroAudioManager()
+    
+    @Published var soundVolume: Float = 0.75 {
+        didSet {
+            audioManager.soundVolume = soundVolume
+        }
+    }
+    
     init() {
-        // Remove notification permission request
     }
     
     func start() {
@@ -95,26 +102,14 @@ class PomodoroTimer: ObservableObject {
     }
     
     private func playSound(named: String) {
-        guard let path = Bundle.main.path(forResource: named, ofType: "mp3") else {
-            print("Could not find sound file: \(named).mp3")
-            return
-        }
-        
-        do {
-            audioPlayer?.stop() // Stop any existing audio
-            audioPlayer = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
-            audioPlayer?.play()
-        } catch {
-            print("Could not create audio player: \(error.localizedDescription)")
-        }
+        audioManager.playSound(named: named)
     }
     
     func cleanup() {
         pause()
         timer?.invalidate()
         timer = nil
-        audioPlayer?.stop()
-        audioPlayer = nil
+        audioManager.cleanup()
     }
     
     func handleScreenLock() {
@@ -262,6 +257,21 @@ struct SettingsView: View {
                 ), in: 2...8) {
                     Text("Long break after \(pomodoroTimer.intervalsUntilLongBreak) Pomodoros")
                 }
+            }
+            
+            Section(header: Text("Sound Settings")) {
+                HStack {
+                    Image(systemName: "speaker.wave.1")
+                    Slider(
+                        value: $pomodoroTimer.soundVolume,
+                        in: 0...1,
+                        step: 0.05
+                    ) {
+                        Text("Notification Volume")
+                    }
+                    Image(systemName: "speaker.wave.3")
+                }
+                .padding(.vertical, 4)
             }
         }
         .formStyle(.grouped)
