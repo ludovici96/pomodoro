@@ -24,7 +24,7 @@ class PomodoroAudioManager {
         
         // Configure the gain node with one band.
         if let band = gainNode.bands.first {
-            band.gain = 12.0
+            band.gain = 18.0
             band.filterType = .parametric
             band.bypass = false
         }
