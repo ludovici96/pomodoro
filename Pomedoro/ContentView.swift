@@ -281,14 +281,16 @@ struct SettingsView: View {
             Section(header: Text("Sound Settings")) {
                 HStack {
                     Image(systemName: "speaker.wave.1")
+                        .offset(y: -2)
                     Slider(
                         value: $pomodoroTimer.soundVolume,
                         in: 0...1,
                         step: 0.05
                     ) {
-                        Text("Notification Volume")
+                        Text("    Adjust Volume").padding(.horizontal, -10)
                     }
                     Image(systemName: "speaker.wave.3")
+                        .offset(y: -1)
                 }
                 .padding(.vertical, 4)
             }
