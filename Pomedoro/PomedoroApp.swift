@@ -1,5 +1,6 @@
 import SwiftUI
 import Cocoa
+import UserNotifications
 
 @main
 struct PomedoroApp: App {
@@ -19,6 +20,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var observerTokens: [(center: AnyObject, token: NSObjectProtocol)] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Request notification permissions
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                print("Notification permission error: \(error.localizedDescription)")
+            }
+        }
+        
         // Create status bar controller
         statusBarController = StatusBarController()
         
