@@ -158,12 +158,12 @@ struct TimerView: View {
     @State private var isTransitioning = false
     
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 16)
+        VStack(spacing: 12) {  // Reduced from 20
+            Spacer(minLength: 8)  // Reduced from 16
             
             // Timer display with animation
             Text(timeString(from: pomodoroTimer.timeRemaining))
-                .font(.system(size: 64, weight: .medium, design: .monospaced))
+                .font(.system(size: 48, weight: .medium, design: .monospaced))  // Reduced from 64
                 .foregroundColor(.primary)
                 .scaleEffect(isTransitioning ? 1.1 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isTransitioning)
@@ -171,10 +171,10 @@ struct TimerView: View {
             
             // Session type indicator with animated background
             Text(pomodoroTimer.isWorkSession ? "Work Session" : "Break Time")
-                .font(.headline)
+                .font(.subheadline)  // Changed from headline
                 .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 16)  // Reduced from 20
+                .padding(.vertical, 6)  // Reduced from 10
                 .background(
                     RoundedRectangle(cornerRadius: 20)
                         .fill(pomodoroTimer.isWorkSession ? Color.workColor : Color.breakColor)
@@ -192,26 +192,26 @@ struct TimerView: View {
                 .opacity(isTransitioning ? 0.5 : 1.0)
                 .animation(.easeInOut, value: isTransitioning)
             
-            // Control buttons.
-            HStack(spacing: 16) {
+            // Control buttons
+            HStack(spacing: 12) {  // Reduced from 16
                 Button(action: toggleTimer) {
                     Text(pomodoroTimer.isRunning ? "Pause" : "Start")
-                        .frame(minWidth: 80)
+                        .frame(minWidth: 70)  // Reduced from 80
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.large)
+                .controlSize(.regular)  // Changed from large
                 
                 Button(action: pomodoroTimer.reset) {
                     Text("Reset")
-                        .frame(minWidth: 80)
+                        .frame(minWidth: 70)  // Reduced from 80
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.large)
+                .controlSize(.regular)  // Changed from large
             }
             
-            Spacer(minLength: 16)
+            Spacer(minLength: 8)  // Reduced from 16
         }
-        .padding()
+        .padding(12)  // Reduced from default
     }
     
     private func triggerTransitionAnimation() {
@@ -239,66 +239,329 @@ struct TimerView: View {
 
 // MARK: - Settings View
 
-struct SettingsView: View {
-    @ObservedObject var pomodoroTimer: PomodoroTimer
+struct SettingTile: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
     
     var body: some View {
-        Form {
-            Section(header: Text("Work Session Duration (minutes)")) {
-                Stepper(value: Binding(
-                    get: { pomodoroTimer.workDuration / 60 },
-                    set: { pomodoroTimer.workDuration = $0 * 60 }
-                ), in: 1...120) {
-                    Text("\(pomodoroTimer.workDuration / 60) minutes")
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(color)
+                    Text(title)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
+                Text(value)
+                    .font(.system(.body, design: .rounded))
+                    .foregroundColor(.primary)
             }
-            
-            Section(header: Text("Break Durations")) {
-                Stepper(value: Binding(
-                    get: { pomodoroTimer.breakDuration / 60 },
-                    set: { pomodoroTimer.breakDuration = $0 * 60 }
-                ), in: 1...60) {
-                    Text("Short Break: \(pomodoroTimer.breakDuration / 60) minutes")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.controlBackgroundColor))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SettingsView: View {
+    @ObservedObject var pomodoroTimer: PomodoroTimer
+    @State private var editingTile: String?
+    
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8)
+            ], spacing: 8) {
+                SettingTile(
+                    title: "Work Duration",
+                    value: "\(pomodoroTimer.workDuration / 60)m",
+                    icon: "timer",
+                    color: .workColor
+                ) {
+                    editingTile = "work"
                 }
                 
-                Stepper(value: Binding(
-                    get: { pomodoroTimer.longBreakDuration / 60 },
-                    set: { pomodoroTimer.longBreakDuration = $0 * 60 }
-                ), in: 15...45) {
-                    Text("Long Break: \(pomodoroTimer.longBreakDuration / 60) minutes")
+                SettingTile(
+                    title: "Break",
+                    value: "\(pomodoroTimer.breakDuration / 60)m",
+                    icon: "cup.and.saucer",
+                    color: .breakColor
+                ) {
+                    editingTile = "break"
+                }
+                
+                SettingTile(
+                    title: "Long Break",
+                    value: "\(pomodoroTimer.longBreakDuration / 60)m",
+                    icon: "beach.umbrella",
+                    color: .blue
+                ) {
+                    editingTile = "longBreak"
+                }
+                
+                SettingTile(
+                    title: "Intervals",
+                    value: "\(pomodoroTimer.intervalsUntilLongBreak)",
+                    icon: "repeat",
+                    color: .purple
+                ) {
+                    editingTile = "intervals"
+                }
+                
+                SettingTile(
+                    title: "Sound",
+                    value: "\(Int(pomodoroTimer.soundVolume * 100))%",
+                    icon: "speaker.wave.2",
+                    color: .orange
+                ) {
+                    editingTile = "sound"
                 }
             }
+            .padding(12)
+        }
+        .sheet(item: $editingTile) { tile in
+            SettingDetailView(
+                pomodoroTimer: pomodoroTimer,
+                settingType: tile,
+                isPresented: Binding(
+                    get: { editingTile != nil },
+                    set: { if !$0 { editingTile = nil } }
+                )
+            )
+            .frame(width: 240, height: 140)  // Reduced from 300x180
+        }
+    }
+}
+
+struct SettingDetailView: View {
+    @ObservedObject var pomodoroTimer: PomodoroTimer
+    let settingType: String
+    @Binding var isPresented: Bool
+    @Environment(\.colorScheme) var colorScheme
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Custom header without system styling
+            HStack {
+                Text(title)
+                    .font(.system(.body, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Button(action: { isPresented = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .imageScale(.medium)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
             
-            Section(header: Text("Long Break Interval")) {
-                Stepper(value: Binding(
-                    get: { pomodoroTimer.intervalsUntilLongBreak },
-                    set: { pomodoroTimer.intervalsUntilLongBreak = $0 }
-                ), in: 2...8) {
-                    Text("Long break after \(pomodoroTimer.intervalsUntilLongBreak) Pomodoros")
+            // Content
+            Group {
+                switch settingType {
+                case "sound":
+                    VolumeControl(volume: $pomodoroTimer.soundVolume)
+                case "work":
+                    EnhancedDurationControl(
+                        value: Binding(
+                            get: { pomodoroTimer.workDuration / 60 },
+                            set: { pomodoroTimer.workDuration = $0 * 60 }
+                        ),
+                        range: 1...120,
+                        icon: "timer",
+                        color: .workColor
+                    )
+                case "break":
+                    EnhancedDurationControl(
+                        value: Binding(
+                            get: { pomodoroTimer.breakDuration / 60 },
+                            set: { pomodoroTimer.breakDuration = $0 * 60 }
+                        ),
+                        range: 1...60,
+                        icon: "cup.and.saucer",
+                        color: .breakColor
+                    )
+                case "longBreak":
+                    EnhancedDurationControl(
+                        value: Binding(
+                            get: { pomodoroTimer.longBreakDuration / 60 },
+                            set: { pomodoroTimer.longBreakDuration = $0 * 60 }
+                        ),
+                        range: 15...45,
+                        icon: "beach.umbrella",
+                        color: .blue
+                    )
+                case "intervals":
+                    EnhancedDurationControl(
+                        value: $pomodoroTimer.intervalsUntilLongBreak,
+                        range: 2...8,
+                        icon: "repeat",
+                        color: .purple
+                    )
+                default:
+                    EmptyView()
                 }
             }
+            .padding(.horizontal, 12)  // Reduced from default
+            .padding(.bottom, 12)
+        }
+        .background(Color(NSColor.windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+        )
+        .overlay(
+            Button("") { isPresented = false }
+                .keyboardShortcut(.return, modifiers: [])
+                .opacity(0)
+        )
+        .focused($isFocused)
+        .onAppear { isFocused = true }
+        .submitScope()
+        .onSubmit {
+            isPresented = false
+        }
+    }
+    
+    private var title: String {
+        switch settingType {
+        case "work": return "Work Duration"
+        case "break": return "Break Duration"
+        case "longBreak": return "Long Break Duration"
+        case "intervals": return "Intervals Until Long Break"
+        case "sound": return "Sound Volume"
+        default: return ""
+        }
+    }
+}
+
+struct EnhancedDurationControl: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let icon: String
+    let color: Color
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        VStack(spacing: 12) {  // Reduced from 16
+            // Value display
+            Text("\(value)")
+                .font(.system(size: 32, weight: .medium, design: .rounded))  // Reduced from 36
+                .foregroundColor(color)
             
-            Section(header: Text("Sound Settings")) {
-                HStack {
-                    Image(systemName: "speaker.wave.1")
-                        .offset(y: -2)
-                    Slider(
-                        value: $pomodoroTimer.soundVolume,
-                        in: 0...1,
-                        step: 0.05
-                    ) {
-                        Text("    Adjust Volume").padding(.horizontal, -10)
-                    }
-                    Image(systemName: "speaker.wave.3")
-                        .offset(y: -1)
+            // Controls
+            HStack(spacing: 16) {  // Reduced from 20
+                Button(action: decrement) {
+                    Image(systemName: "minus.circle.fill")
+                        .imageScale(.large)
                 }
-                .padding(.vertical, 4)
+                .keyboardShortcut(.leftArrow, modifiers: [])
+                .buttonStyle(.plain)
+                .disabled(value <= range.lowerBound)
+                
+                Image(systemName: icon)
+                    .imageScale(.large)
+                    .foregroundColor(color)
+                
+                Button(action: increment) {
+                    Image(systemName: "plus.circle.fill")
+                        .imageScale(.large)
+                }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+                .buttonStyle(.plain)
+                .disabled(value >= range.upperBound)
+            }
+            .font(.title3)  // Changed from title2
+            .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 8)  // Reduced from 10
+        .focused($isFocused)
+        .onAppear { isFocused = true }
+    }
+    
+    private func increment() {
+        if value < range.upperBound {
+            value += 1
+        }
+    }
+    
+    private func decrement() {
+        if value > range.lowerBound {
+            value -= 1
+        }
+    }
+}
+
+// Update VolumeControl to match the new aesthetic
+struct VolumeControl: View {
+    @Binding var volume: Float
+    @FocusState private var isFocused: Bool
+    
+    private let step: Float = 0.05
+    
+    var body: some View {
+        VStack(spacing: 12) {  // Reduced from 16
+            // Volume percentage
+            Text("\(volumePercentage)%")
+                .font(.system(size: 32, weight: .medium, design: .rounded))  // Reduced from 36
+                .foregroundColor(.orange)
+            
+            // Slider with icons
+            HStack {
+                Image(systemName: "speaker.wave.1")
+                    .foregroundColor(.secondary)
+                Slider(value: $volume, in: 0...1, step: step)
+                    .tint(.orange)
+                Image(systemName: "speaker.wave.3")
+                    .foregroundColor(.secondary)
             }
         }
-        .formStyle(.grouped)
-        .padding([.horizontal, .bottom])
-        .frame(maxHeight: .infinity)
+        .padding(.vertical, 8)  // Reduced from 10
+        .focused($isFocused)
+        .onAppear { isFocused = true }
+        .overlay(
+            HStack {
+                Button(action: decreaseVolume) { }
+                    .keyboardShortcut(.leftArrow, modifiers: [])
+                    .opacity(0)
+                Button(action: increaseVolume) { }
+                    .keyboardShortcut(.rightArrow, modifiers: [])
+                    .opacity(0)
+            }
+        )
     }
+    
+    private var volumePercentage: Int {
+        return Int(round(volume * 20) * 5)
+    }
+    
+    private func increaseVolume() {
+        let newValue = round((volume + step) * 20) / 20
+        volume = min(1.0, newValue)
+    }
+    
+    private func decreaseVolume() {
+        let newValue = round((volume - step) * 20) / 20
+        volume = max(0.0, newValue)
+    }
+}
+
+// Make String conform to Identifiable for sheet presentation
+extension String: @retroactive Identifiable {
+    public var id: String { self }
 }
 
 // MARK: - ContentView (Tab View)
@@ -316,11 +579,12 @@ struct ContentView: View {
                     Text("Settings").tag(1)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 200)
+                .frame(width: 160)  // Reduced from 200
+                .controlSize(.small)  // Added control size
                 .labelsHidden()
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)  // Reduced from 8
             .background(Color(NSColor.windowBackgroundColor))
             
             // Content
@@ -334,7 +598,7 @@ struct ContentView: View {
             .transition(.opacity)
             .animation(.easeInOut, value: selectedView)
         }
-        .frame(minWidth: 300, maxWidth: 400, minHeight: 300)
+        .frame(minWidth: 260, maxWidth: 320, minHeight: 240)  // Reduced from 300x400x300
         .background(Color(NSColor.windowBackgroundColor))
         .onDisappear {
             pomodoroTimer.cleanup()
