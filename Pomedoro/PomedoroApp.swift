@@ -7,7 +7,6 @@ struct PomedoroApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // An empty scene since the UI is entirely in the status bar popover.
         Settings {
             EmptyView()
         }
@@ -16,29 +15,25 @@ struct PomedoroApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
-    // Store observer tokens along with their notification center for proper removal.
     private var observerTokens: [(center: AnyObject, token: NSObjectProtocol)] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Request notification permissions
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error = error {
                 print("Notification permission error: \(error.localizedDescription)")
             }
         }
         
-        // Create status bar controller
+
         statusBarController = StatusBarController()
         
-        // Prevent app from appearing in dock
         NSApp.setActivationPolicy(.accessory)
         
-        // Setup multiple observers for different lock scenarios
+
         let workspace = NSWorkspace.shared
         let notificationCenter = workspace.notificationCenter
         let distributedCenter = DistributedNotificationCenter.default()
         
-        // Screen lock notifications
         let lockNotifications: [(AnyObject, String)] = [
             (notificationCenter, NSWorkspace.sessionDidResignActiveNotification.rawValue),
             (notificationCenter, NSWorkspace.screensDidSleepNotification.rawValue),
@@ -46,7 +41,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             (distributedCenter, "com.apple.loginwindow.lock")
         ]
         
-        // Screen unlock notifications
         let unlockNotifications: [(AnyObject, String)] = [
             (notificationCenter, NSWorkspace.sessionDidBecomeActiveNotification.rawValue),
             (notificationCenter, NSWorkspace.screensDidWakeNotification.rawValue),
@@ -54,7 +48,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             (distributedCenter, "com.apple.loginwindow.unlock")
         ]
         
-        // Add lock observers
         for (center, name) in lockNotifications {
             let observer = (center as? NotificationCenter ?? distributedCenter).addObserver(
                 forName: NSNotification.Name(name),
@@ -66,7 +59,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             observerTokens.append((center: center, token: observer))
         }
         
-        // Add unlock observers
         for (center, name) in unlockNotifications {
             let observer = (center as? NotificationCenter ?? distributedCenter).addObserver(
                 forName: NSNotification.Name(name),
@@ -80,7 +72,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
-        // Clean up all observers using the stored pairs.
         for (center, token) in observerTokens {
             if let center = center as? NotificationCenter {
                 center.removeObserver(token)
@@ -104,17 +95,12 @@ class StatusBarController: NSObject {
     override init() {
         super.init()
         
-        // Initialize ContentView first
         contentView = ContentView()
         
-        // Create the status bar item first
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        
-        // Create the menu but don't assign it to statusItem yet
         menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         
-        // Configure status bar button
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Pomodoro Timer")
             button.imagePosition = .imageOnly
@@ -123,18 +109,15 @@ class StatusBarController: NSObject {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         
-        // Create the popover
         popover = NSPopover()
         popover.contentSize = NSSize(width: 320, height: 300)
         popover.behavior = .applicationDefined
         popover.animates = true
         
-        // Create a hosting controller that allows flexible sizing
         let hostingController = NSHostingController(rootView: contentView)
         hostingController.sizingOptions = .preferredContentSize
         popover.contentViewController = hostingController
         
-        // Configure event monitor for outside clicks
         eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self, self.popover.isShown else { return }
             self.hidePopover(sender: event)
@@ -144,9 +127,9 @@ class StatusBarController: NSObject {
     @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
         if let event = NSApp.currentEvent {
             if event.type == .rightMouseUp {
-                statusItem.menu = menu // Set menu only for right click
-                statusItem.button?.performClick(nil) // Show the menu
-                statusItem.menu = nil // Remove menu after click
+                statusItem.menu = menu
+                statusItem.button?.performClick(nil)
+                statusItem.menu = nil
             } else {
                 togglePopover(sender)
             }
@@ -167,7 +150,6 @@ class StatusBarController: NSObject {
         popover.show(relativeTo: statusBarButton.bounds, of: statusBarButton, preferredEdge: .minY)
         eventMonitor?.start()
         
-        // Ensure app is active
         if !NSApp.isActive {
             NSApp.activate(ignoringOtherApps: true)
         }
@@ -202,7 +184,6 @@ class StatusBarController: NSObject {
     }
 }
 
-// Add this class to handle click events outside the popover
 class EventMonitor {
     private var monitor: Any?
     private let mask: NSEvent.EventTypeMask

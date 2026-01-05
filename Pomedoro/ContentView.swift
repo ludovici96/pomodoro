@@ -3,16 +3,12 @@ import AVFoundation
 import CoreAudio
 import UserNotifications
 
-// Add these color extensions after the existing imports
 extension Color {
     static let workColor = Color(red: 0.91, green: 0.3, blue: 0.24)
     static let breakColor = Color(red: 0.2, green: 0.67, blue: 0.52)
 }
 
-// MARK: - Pomodoro Timer Model
-
 class PomodoroTimer: ObservableObject {
-    // User-configurable durations (in seconds)
     @Published var workDuration: Int = 25 * 60 {
         didSet {
             if isWorkSession && !isRunning {
@@ -32,15 +28,12 @@ class PomodoroTimer: ObservableObject {
     @Published var longBreakDuration: Int = 15 * 60
     @Published var intervalsUntilLongBreak: Int = 4
     @Published var completedIntervals: Int = 0
-    
-    // Initialize with a default timeRemaining equal to workDuration.
     @Published var timeRemaining: Int = 25 * 60
     @Published var isRunning = false
     @Published var isWorkSession = true
     
     private var timer: Timer?
     
-    // Add this new property to track if timer was running before screen lock
     private var wasRunningBeforeLock = false
     
     private let audioManager = PomodoroAudioManager()
@@ -81,20 +74,18 @@ class PomodoroTimer: ObservableObject {
     
     private func toggleSession() {
         if isWorkSession {
-            // Switching from work to break
             completedIntervals += 1
             isWorkSession = false
-            
-            // Determine if it's time for a long break
+
             if completedIntervals >= intervalsUntilLongBreak {
                 timeRemaining = longBreakDuration
-                completedIntervals = 0 // Reset counter
+                completedIntervals = 0
             } else {
                 timeRemaining = breakDuration
             }
             sendNotification(title: "Break Time!", body: "Time for a \(timeRemaining / 60) minute break.")
         } else {
-            // Switching from break to work
+
             isWorkSession = true
             timeRemaining = workDuration
             sendNotification(title: "Time to Focus!", body: "Let's start a \(timeRemaining / 60) minute work session.")
@@ -138,7 +129,6 @@ class PomodoroTimer: ObservableObject {
         }
     }
     
-    // Optional: Add auto-resume when screen unlocks
     func handleScreenUnlock() {
         if wasRunningBeforeLock {
             start()
@@ -151,30 +141,26 @@ class PomodoroTimer: ObservableObject {
     }
 }
 
-// MARK: - Timer View
 
 struct TimerView: View {
     @ObservedObject var pomodoroTimer: PomodoroTimer
     @State private var isTransitioning = false
     
     var body: some View {
-        VStack(spacing: 12) {  // Reduced from 20
-            Spacer(minLength: 8)  // Reduced from 16
-            
-            // Timer display with animation
+        VStack(spacing: 12) {
+            Spacer(minLength: 8)
             Text(timeString(from: pomodoroTimer.timeRemaining))
-                .font(.system(size: 48, weight: .medium, design: .monospaced))  // Reduced from 64
+                .font(.system(size: 48, weight: .medium, design: .monospaced))
                 .foregroundColor(.primary)
                 .scaleEffect(isTransitioning ? 1.1 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isTransitioning)
                 .fixedSize(horizontal: true, vertical: true)
-            
-            // Session type indicator with animated background
+
             Text(pomodoroTimer.isWorkSession ? "Work Session" : "Break Time")
-                .font(.subheadline)  // Changed from headline
+                .font(.subheadline)
                 .foregroundColor(.white)
-                .padding(.horizontal, 16)  // Reduced from 20
-                .padding(.vertical, 6)  // Reduced from 10
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
                         .fill(pomodoroTimer.isWorkSession ? Color.workColor : Color.breakColor)
@@ -185,33 +171,31 @@ struct TimerView: View {
                         .stroke(Color.primary.opacity(0.2), lineWidth: 1)
                 )
             
-            // Interval counter with fade transition
             Text("\(pomodoroTimer.completedIntervals) / \(pomodoroTimer.intervalsUntilLongBreak) until long break")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .opacity(isTransitioning ? 0.5 : 1.0)
                 .animation(.easeInOut, value: isTransitioning)
             
-            // Control buttons
-            HStack(spacing: 12) {  // Reduced from 16
+            HStack(spacing: 12) {
                 Button(action: toggleTimer) {
                     Text(pomodoroTimer.isRunning ? "Pause" : "Start")
-                        .frame(minWidth: 70)  // Reduced from 80
+                        .frame(minWidth: 70)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.regular)  // Changed from large
+                .controlSize(.regular)
                 
                 Button(action: pomodoroTimer.reset) {
                     Text("Reset")
-                        .frame(minWidth: 70)  // Reduced from 80
+                        .frame(minWidth: 70)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.regular)  // Changed from large
+                .controlSize(.regular)
             }
             
-            Spacer(minLength: 8)  // Reduced from 16
+            Spacer(minLength: 8)
         }
-        .padding(12)  // Reduced from default
+        .padding(12)
     }
     
     private func triggerTransitionAnimation() {
@@ -220,8 +204,7 @@ struct TimerView: View {
             isTransitioning = false
         }
     }
-    
-    // Helper: Format seconds into MM:SS.
+
     private func timeString(from seconds: Int) -> String {
         let minutes = seconds / 60
         let remainingSeconds = seconds % 60
@@ -236,8 +219,6 @@ struct TimerView: View {
         }
     }
 }
-
-// MARK: - Settings View
 
 struct SettingTile: View {
     let title: String
@@ -338,7 +319,7 @@ struct SettingsView: View {
                     set: { if !$0 { editingTile = nil } }
                 )
             )
-            .frame(width: 240, height: 140)  // Reduced from 300x180
+            .frame(width: 240, height: 140)
         }
     }
 }
@@ -352,7 +333,6 @@ struct SettingDetailView: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            // Custom header without system styling
             HStack {
                 Text(title)
                     .font(.system(.body, weight: .medium))
@@ -368,7 +348,6 @@ struct SettingDetailView: View {
             .padding(.horizontal, 12)
             .padding(.top, 12)
             
-            // Content
             Group {
                 switch settingType {
                 case "sound":
@@ -414,7 +393,7 @@ struct SettingDetailView: View {
                     EmptyView()
                 }
             }
-            .padding(.horizontal, 12)  // Reduced from default
+            .padding(.horizontal, 12)
             .padding(.bottom, 12)
         }
         .background(Color(NSColor.windowBackgroundColor))
@@ -456,14 +435,11 @@ struct EnhancedDurationControl: View {
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        VStack(spacing: 12) {  // Reduced from 16
-            // Value display
+        VStack(spacing: 12) {
             Text("\(value)")
-                .font(.system(size: 32, weight: .medium, design: .rounded))  // Reduced from 36
+                .font(.system(size: 32, weight: .medium, design: .rounded))
                 .foregroundColor(color)
-            
-            // Controls
-            HStack(spacing: 16) {  // Reduced from 20
+            HStack(spacing: 16) {
                 Button(action: decrement) {
                     Image(systemName: "minus.circle.fill")
                         .imageScale(.large)
@@ -484,10 +460,10 @@ struct EnhancedDurationControl: View {
                 .buttonStyle(.plain)
                 .disabled(value >= range.upperBound)
             }
-            .font(.title3)  // Changed from title2
+            .font(.title3)
             .foregroundColor(.secondary)
         }
-        .padding(.vertical, 8)  // Reduced from 10
+        .padding(.vertical, 8)
         .focused($isFocused)
         .onAppear { isFocused = true }
     }
@@ -505,7 +481,6 @@ struct EnhancedDurationControl: View {
     }
 }
 
-// Update VolumeControl to match the new aesthetic
 struct VolumeControl: View {
     @Binding var volume: Float
     @FocusState private var isFocused: Bool
@@ -513,13 +488,12 @@ struct VolumeControl: View {
     private let step: Float = 0.05
     
     var body: some View {
-        VStack(spacing: 12) {  // Reduced from 16
-            // Volume percentage
+        VStack(spacing: 12) {
             Text("\(volumePercentage)%")
-                .font(.system(size: 32, weight: .medium, design: .rounded))  // Reduced from 36
+                .font(.system(size: 32, weight: .medium, design: .rounded))
                 .foregroundColor(.orange)
             
-            // Slider with icons
+
             HStack {
                 Image(systemName: "speaker.wave.1")
                     .foregroundColor(.secondary)
@@ -529,7 +503,7 @@ struct VolumeControl: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.vertical, 8)  // Reduced from 10
+        .padding(.vertical, 8)
         .focused($isFocused)
         .onAppear { isFocused = true }
         .overlay(
@@ -559,12 +533,10 @@ struct VolumeControl: View {
     }
 }
 
-// Make String conform to Identifiable for sheet presentation
 extension String: @retroactive Identifiable {
     public var id: String { self }
 }
 
-// MARK: - ContentView (Tab View)
 
 struct ContentView: View {
     @StateObject var pomodoroTimer = PomodoroTimer()
@@ -572,22 +544,20 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Toolbar
             HStack {
                 Picker("", selection: $selectedView) {
                     Text("Timer").tag(0)
                     Text("Settings").tag(1)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 160)  // Reduced from 200
-                .controlSize(.small)  // Added control size
+                .frame(width: 160)
+                .controlSize(.small)
                 .labelsHidden()
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)  // Reduced from 8
+            .padding(.vertical, 6)
             .background(Color(NSColor.windowBackgroundColor))
             
-            // Content
             Group {
                 if selectedView == 0 {
                     TimerView(pomodoroTimer: pomodoroTimer)
@@ -598,7 +568,7 @@ struct ContentView: View {
             .transition(.opacity)
             .animation(.easeInOut, value: selectedView)
         }
-        .frame(minWidth: 260, maxWidth: 320, minHeight: 240)  // Reduced from 300x400x300
+        .frame(minWidth: 260, maxWidth: 320, minHeight: 240)
         .background(Color(NSColor.windowBackgroundColor))
         .onDisappear {
             pomodoroTimer.cleanup()
